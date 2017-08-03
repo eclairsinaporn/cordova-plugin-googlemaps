@@ -779,16 +779,12 @@
         }];
       }
       //myLocationButton
-      if ([controls valueForKey:@"myLocationButton"] != nil) {
-        isEnabled = [[controls valueForKey:@"myLocationButton"] boolValue];
+      if ([controls valueForKey:@"myLocation"] != nil || [controls valueForKey:@"myLocationButton"] != nil) {
+        BOOL isButtonVisible = [[controls valueForKey:@"myLocationButton"] boolValue];
+        BOOL isLocationEnabled = isButtonVisible || [[controls valueForKey:@"myLocation"] boolValue];
         [[NSOperationQueue mainQueue] addOperationWithBlock:^{
-          if (isEnabled == true) {
-            self.mapCtrl.map.settings.myLocationButton = YES;
-            self.mapCtrl.map.myLocationEnabled = YES;
-          } else {
-            self.mapCtrl.map.settings.myLocationButton = NO;
-            self.mapCtrl.map.myLocationEnabled = NO;
-          }
+          self.mapCtrl.map.settings.myLocationButton = isButtonVisible;
+          self.mapCtrl.map.myLocationEnabled = isLocationEnabled;
         }];
       }
       //indoorPicker
