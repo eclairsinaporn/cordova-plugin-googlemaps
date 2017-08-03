@@ -308,15 +308,18 @@ public class PluginMap extends MyPlugin implements OnMarkerClickListener,
               if (params.has("controls")) {
                 JSONObject controls = params.getJSONObject("controls");
 
-                if (controls.has("myLocationButton")) {
-                  final Boolean isEnabled = controls.getBoolean("myLocationButton");
+                if (controls.has("myLocationButton") || controls.has("myLocation")) {
+                  final Boolean isButtonVisible = controls.has("myLocationButton") && controls.getBoolean("myLocationButton");
+                  final Boolean isLocationEnabled = isButtonVisible || controls.has("myLocation") && controls.getBoolean("myLocation");
+
                   cordova.getThreadPool().submit(new Runnable() {
                     @Override
                     public void run() {
-                      if (isEnabled) {
+                      if (isLocationEnabled) {
                         try {
-                          JSONArray args = new JSONArray();
-                          args.put(isEnabled);
+                          JSONObject args = new JSONObject();
+                          args.put("isButtonVisible", isButtonVisible);
+                          args.put("isLocationEnabled", isLocationEnabled);
                           PluginMap.this.setMyLocationEnabled(args, callbackContext);
                         } catch (JSONException e) {
                           e.printStackTrace();
@@ -780,7 +783,7 @@ public class PluginMap extends MyPlugin implements OnMarkerClickListener,
         } else if (PluginUtil.isNumeric(widthString)) {
           double widthDouble = Double.parseDouble(widthString);
 
-          if (widthDouble <= 1.0) {	// for percentage values (e.g. 0.5 = 50%).
+          if (widthDouble <= 1.0) { // for percentage values (e.g. 0.5 = 50%).
             width = (int)((double)mapView.getWidth() * (widthDouble));
           } else {
             width = (int)widthDouble;
@@ -807,7 +810,7 @@ public class PluginMap extends MyPlugin implements OnMarkerClickListener,
         } else if (PluginUtil.isNumeric(widthString)) {
           double widthDouble = Double.parseDouble(widthString);
 
-          if (widthDouble <= 1.0) {	// for percentage values (e.g. 0.5 = 50%).
+          if (widthDouble <= 1.0) { // for percentage values (e.g. 0.5 = 50%).
             maxWidth = (int)((double)mapView.getWidth() * (widthDouble));
           } else {
             maxWidth = (int)widthDouble;
@@ -1168,12 +1171,14 @@ public class PluginMap extends MyPlugin implements OnMarkerClickListener,
             if (controls.has("mapToolbar")) {
               settings.setMapToolbarEnabled(controls.getBoolean("mapToolbar"));
             }
-            if (controls.has("myLocationButton")) {
-              boolean isEnabled = controls.getBoolean("myLocationButton");
-              settings.setMyLocationButtonEnabled(isEnabled);
+            if (controls.has("myLocationButton") || controls.has("myLocation")) {
+              final boolean isButtonVisible = controls.has("myLocationButton") && controls.getBoolean("myLocationButton");
+              final boolean isLocationEnabled = isButtonVisible || controls.has("myLocation") && controls.getBoolean("myLocation");
+              settings.setMyLocationButtonEnabled(isButtonVisible);
 
-              JSONArray args = new JSONArray();
-              args.put(isEnabled);
+              JSONObject args = new JSONObject();
+              args.put("isButtonVisible", isButtonVisible);
+              args.put("isLocationEnabled", isLocationEnabled);
               PluginMap.this.setMyLocationEnabled(args, callbackContext);
             } else {
               callbackContext.success();
@@ -1588,7 +1593,7 @@ public class PluginMap extends MyPlugin implements OnMarkerClickListener,
    * @param callbackContext
    * @throws JSONException
    */
-  public void setMyLocationEnabled(final JSONArray args, final CallbackContext callbackContext) throws JSONException {
+  public void setMyLocationEnabled(final JSONObject args, final CallbackContext callbackContext) throws JSONException {
 
     // Request geolocation permission.
     boolean locationPermission = false;
@@ -1626,16 +1631,18 @@ public class PluginMap extends MyPlugin implements OnMarkerClickListener,
 
     }
 
-    final Boolean isEnabled = args.getBoolean(0);
+    final boolean isLocationEnabled = args.getBoolean("isLocationEnabled");
+    final boolean isButtonVisible = args.getBoolean("isButtonVisible");
+
     this.activity.runOnUiThread(new Runnable() {
       @Override
       public void run() {
         try {
-          map.setMyLocationEnabled(isEnabled);
+          map.setMyLocationEnabled(isLocationEnabled);
         } catch (SecurityException e) {
           e.printStackTrace();
         }
-        map.getUiSettings().setMyLocationButtonEnabled(isEnabled);
+        map.getUiSettings().setMyLocationButtonEnabled(isButtonVisible);
         callbackContext.success();
       }
     });
