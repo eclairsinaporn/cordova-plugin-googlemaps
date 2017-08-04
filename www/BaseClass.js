@@ -101,7 +101,7 @@ BaseClass.prototype = {
     }
 
     return this;
-  }
+  },
 
   one: function(eventName, listener) {
     var unlisten = this.on(eventName, function() {
