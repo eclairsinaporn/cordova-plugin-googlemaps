@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
-<plugin id="cordova-plugin-googlemaps" version="2.0.0-beta3-20170803-1233" xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
-    <name>cordova-plugin-googlemaps</name>
+<plugin id="cdv-googlemaps" version="3.0.0-alpha-20170804-1948" xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
+    <name>cdv-googlemaps</name>
     <js-module name="BaseClass" src="www/BaseClass.js">
       <runs />
     </js-module>
@@ -76,8 +76,8 @@
 
 
     <description>Google Maps native SDK for Android and iOS</description>
-    <repo>https://github.com/mapsplugin/cordova-plugin-googlemaps</repo>
-    <issue>https://github.com/mapsplugin/cordova-plugin-googlemaps/issues</issue>
+    <repo>https://github.com/stalniy/cordova-plugin-googlemaps</repo>
+    <issue>https://github.com/stalniy/cordova-plugin-googlemaps/issues</issue>
     <author>Masashi Katsumata</author>
 
     <license>Apache 2.0</license>
@@ -95,10 +95,10 @@
 
         <info>
              In order to run this plugin, you need to obtain Google Maps API key for Android.
-             Visit https://github.com/mapsplugin/cordova-plugin-googlemaps/wiki/Installation
+             Visit https://github.com/stalniy/cordova-plugin-googlemaps/wiki/Installation
 
              Check our release notes.
-             https://github.com/mapsplugin/cordova-plugin-googlemaps/wiki/Release-Notes
+             https://github.com/stalniy/cordova-plugin-googlemaps/wiki/Release-Notes
         </info>
 
         <config-file target="res/xml/config.xml" parent="/*">
@@ -204,10 +204,10 @@
 
         <info>
              In order to run this plugin, you need to obtain Google Maps API key for iOS.
-             Visit https://github.com/mapsplugin/cordova-plugin-googlemaps/wiki/Installation
+             Visit https://github.com/stalniy/cordova-plugin-googlemaps/wiki/Installation
 
              Check our release notes.
-             https://github.com/mapsplugin/cordova-plugin-googlemaps/wiki/Release-Notes
+             https://github.com/stalniy/cordova-plugin-googlemaps/wiki/Release-Notes
         </info>
 
         <config-file target="config.xml" parent="/*">

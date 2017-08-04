@@ -1,4 +1,4 @@
-# Cordova GoogleMaps plugin for iOS and Android (version 3.0)
+# GoogleMaps cordova plugin for iOS and Android (fork of official cordova-plugin-googlemaps)
 
 ==========================
 
@@ -29,14 +29,13 @@ You can also configure the following variables to customize the iOS location pli
 Exmaple using the cordova CLI
 
 ```bash
-$> cordova plugin rm cordova-plugin-googlemaps
-$> cordova plugin rm com.googlemaps.ios
+$> cordova plugin rm googlemaps
 $> cordova plugin add https://github.com/stalniy/cordova-plugin-googlemaps.git#stage --variable API_KEY_FOR_ANDROID="YOUR_ANDROID_API_KEY_IS_HERE" --variable API_KEY_FOR_IOS="YOUR_IOS_API_KEY_IS_HERE" --variable LOCATION_WHEN_IN_USE_DESCRIPTION="My custom when in use message" --variable LOCATION_ALWAYS_USAGE_DESCRIPTION="My custom always usage message"
 ```
 
 Example using config.xml
 ```xml
-<plugin name="cordova-plugin-googlemaps" spec="1.4.0">
+<plugin name="googlemaps" spec="3.0.0-alpha-20170804-1948">
     <variable name="API_KEY_FOR_ANDROID" value="YOUR_ANDROID_API_KEY_IS_HERE" />
     <variable name="API_KEY_FOR_IOS" value="YOUR_IOS_API_KEY_IS_HERE" />
     <variable name="LOCATION_WHEN_IN_USE_DESCRIPTION" value="My custom when in use message" />
@@ -107,14 +106,3 @@ function onBtnClicked() {
 
 [All documentations are here!!](https://github.com/mapsplugin/cordova-plugin-googlemaps-doc/blob/master/v2.0.0/README.md)
 
------
-
-### Buy me a beer
-
-I have been spend tons of time for this plugin project, but even though the plugin is still free.
-
-I appreciate if you donate some amount to help this project from this button.
-
-[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=SQPLZJ672HJ9N&lc=US&item_name=cordova%2dgooglemaps%2dplugin&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donate_SM%2egif%3aNonHosted)
-
-The donated amount is used for buying testing machine (such as iPhone, Android) or new software.

@@ -1,9 +1,9 @@
 {
-  "name": "cordova-plugin-googlemaps",
-  "version": "2.0.0-beta2",
+  "name": "cdv-googlemaps",
+  "version": "3.0.0-alpha",
   "description": "Google Maps native SDK for Android and iOS",
   "cordova": {
-    "id": "cordova-plugin-googlemaps",
+    "id": "cdv-googlemaps",
     "platforms": [
       "android",
       "ios"
@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/mapsplugin/cordova-plugin-googlemaps.git#multiple_maps"
+    "url": "https://github.com/stalniy/cordova-plugin-googlemaps.git#stage"
   },
   "keywords": [
     "google",
@@ -22,16 +22,10 @@
     "cordova-android",
     "cordova-ios"
   ],
-  "engines": [
-    {
-      "name": "cordova",
-      "version": ">=6.2.0"
-    }
-  ],
-  "author": "Masashi Katsumata, Hirbod Mirjavadi",
-  "license": "Apache 2.0",
+  "author": "Sergii Stotskyi",
+  "license": "MIT",
   "bugs": {
-    "url": "https://github.com/mapsplugin/cordova-plugin-googlemaps/issues"
+    "url": "https://github.com/stalniy/cordova-plugin-googlemaps/issues"
   },
-  "homepage": "https://github.com/mapsplugin/cordova-plugin-googlemaps#readme"
+  "homepage": "https://github.com/stalniy/cordova-plugin-googlemaps#readme"
 }
