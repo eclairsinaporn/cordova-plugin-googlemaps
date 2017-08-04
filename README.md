@@ -1,6 +1,8 @@
-# Cordova GoogleMaps plugin for iOS and Android (version 2.0 beta)
+# Cordova GoogleMaps plugin for iOS and Android (version 3.0)
 
 ==========================
+
+This is a fork of `cordova-plugin-googlemaps` which has the goal to optimize internals, so the application works smoother, faster and eats less battery.
 
 This plugin is a thin wrapper for [Google Maps Android API](https://developers.google.com/maps/documentation/android/) and [Google Maps SDK for iOS](https://developers.google.com/maps/documentation/ios/).
 Both [PhoneGap](http://phonegap.com/) and [Apache Cordova](http://cordova.apache.org/) are supported.
@@ -9,20 +11,13 @@ Both [PhoneGap](http://phonegap.com/) and [Apache Cordova](http://cordova.apache
 
 ### Quick install
 
-Since this version is still in beta, you need to install the plugin from github directory.
+Since this version is still in alpha, you need to install the plugin from github directory.
 
-*Github (current multiple_maps branch)*
+*Github (`stage` branch)*
 ```bash
-$> cordova plugin add https://github.com/mapsplugin/cordova-plugin-googlemaps#multiple_maps --variable API_KEY_FOR_ANDROID="YOUR_ANDROID_API_KEY_IS_HERE" --variable API_KEY_FOR_IOS="YOUR_IOS_API_KEY_IS_HERE"
+$> cordova plugin add https://github.com/stalniy/cordova-plugin-googlemaps.git#stage --variable API_KEY_FOR_ANDROID="YOUR_ANDROID_API_KEY_IS_HERE" --variable API_KEY_FOR_IOS="YOUR_IOS_API_KEY_IS_HERE"
 ```
 
-If you re-install the plugin, please always remove the plugin first, then remove the SDK
-
-```bash
-$> cordova plugin rm cordova-plugin-googlemaps
-$> cordova plugin rm com.googlemaps.ios
-$> cordova plugin add https://github.com/mapsplugin/cordova-plugin-googlemaps#multiple_maps --variable API_KEY_FOR_ANDROID="YOUR_ANDROID_API_KEY_IS_HERE" --variable API_KEY_FOR_IOS="YOUR_IOS_API_KEY_IS_HERE"
-```
 
 ### Configuration
 
@@ -36,7 +31,7 @@ Exmaple using the cordova CLI
 ```bash
 $> cordova plugin rm cordova-plugin-googlemaps
 $> cordova plugin rm com.googlemaps.ios
-$> cordova plugin add https://github.com/mapsplugin/cordova-plugin-googlemaps#multiple_maps --variable API_KEY_FOR_ANDROID="YOUR_ANDROID_API_KEY_IS_HERE" --variable API_KEY_FOR_IOS="YOUR_IOS_API_KEY_IS_HERE" --variable LOCATION_WHEN_IN_USE_DESCRIPTION="My custom when in use message" --variable LOCATION_ALWAYS_USAGE_DESCRIPTION="My custom always usage message"
+$> cordova plugin add https://github.com/stalniy/cordova-plugin-googlemaps.git#stage --variable API_KEY_FOR_ANDROID="YOUR_ANDROID_API_KEY_IS_HERE" --variable API_KEY_FOR_IOS="YOUR_IOS_API_KEY_IS_HERE" --variable LOCATION_WHEN_IN_USE_DESCRIPTION="My custom when in use message" --variable LOCATION_ALWAYS_USAGE_DESCRIPTION="My custom always usage message"
 ```
 
 Example using config.xml
