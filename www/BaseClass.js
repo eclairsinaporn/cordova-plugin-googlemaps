@@ -36,7 +36,7 @@ BaseClass.prototype = {
   },
 
   bindTo: function(key, target, targetKey, noNotify) {
-    console.warn('[GoogleMaps] bindTo is deprecated. Please use `sync` instead');
+    console.warn('[GoogleMaps] bindTo is deprecated. Please use `sync(key, target, { targetKey, silent })` instead');
 
     return this.sync(key, target, { targetKey: targetKey, silent: noNotify });
   },
