@@ -48,6 +48,11 @@ var Map = function(id, _exec) {
         }
         exec(null, null, self.id, 'setActiveMarkerId', [newId]);
     });
+
+    self.isReady = false;
+    self.one(event.MAP_READY, function() {
+        self.isReady = true;
+    });
 };
 
 utils.extend(Map, BaseClass);
@@ -255,11 +260,13 @@ Map.prototype.clear = function(callback) {
     clearObj(self.MARKERS);
     clearObj(self.KML_LAYERS);
 
-    exec(function() {
-        if (typeof callback === "function") {
-            callback.call(self);
-        }
-    }, self.errorHandler, this.id, 'clear', [], {sync: true});
+    if (this.isReady) {
+        exec(function() {
+            if (typeof callback === "function") {
+                callback.call(self);
+            }
+        }, self.errorHandler, this.id, 'clear', [], {sync: true});
+    }
 };
 
 /**
@@ -496,19 +503,17 @@ Map.prototype.getCameraPosition = function() {
 Map.prototype.remove = function(callback) {
     var self = this;
     var div = this.get('div');
-    if (div) {
-        while (div) {
-            if (div.style) {
-                div.style.backgroundColor = '';
-            }
-            if (div.classList) {
-                div.classList.remove('_gmaps_cdv_');
-            } else if (div.className) {
-                div.className = div.className.replace(/_gmaps_cdv_/g, "");
-                div.className = div.className.replace(/\s+/g, " ");
-            }
-            div = div.parentNode;
+    while (div) {
+        if (div.style) {
+            div.style.backgroundColor = '';
         }
+        if (div.classList) {
+            div.classList.remove('_gmaps_cdv_');
+        } else if (div.className) {
+            div.className = div.className.replace(/_gmaps_cdv_/g, "");
+            div.className = div.className.replace(/\s+/g, " ");
+        }
+        div = div.parentNode;
     }
     self.trigger("remove");
     self.set('div', undefined);
