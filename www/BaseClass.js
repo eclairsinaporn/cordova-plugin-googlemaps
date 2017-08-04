@@ -1,12 +1,11 @@
 var VARS_FIELD = typeof Symbol === 'undefined' ? '__vars' + Date.now() : Symbol.for('vars');
 var SUBSCRIPTIONS_FIELD = typeof Symbol === 'undefined' ? '__subs' + Date.now() : Symbol.for('subscriptions');
 
-function BaseClass(type) {
+function BaseClass() {
   this[VARS_FIELD] = {};
   this[SUBSCRIPTIONS_FIELD] = {};
   this.errorHandler = this.errorHandler.bind(this);
 
-  Object.defineProperty(this, 'type', { value: type || this.constructor.name })
   Object.defineProperty(this, 'hashCode', { value: Math.floor(Date.now() * Math.random()) })
 }
 
