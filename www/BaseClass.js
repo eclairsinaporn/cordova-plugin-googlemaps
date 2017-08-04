@@ -37,12 +37,13 @@ BaseClass.prototype = {
   bindTo: function(key, target, targetKey, noNotify) {
     console.warn('[GoogleMaps] bindTo is deprecated. Please use `sync(key, target, { targetKey, silent })` instead');
 
-    return this.sync(key, target, { targetKey: targetKey, silent: noNotify });
+    return this.sync(key, { with: target, field: targetKey, silent: noNotify });
   },
 
-  sync: function(key, target, options) {
+  sync: function(key, options) {
     options = options || {};
-    var targetKey = options.targetKey || key;
+    var target = options.with;
+    var targetKey = options.field || key;
     var isSilent = options.silent;
 
     this.on(key + '_changed', function(oldValue, value) {
@@ -73,17 +74,7 @@ BaseClass.prototype = {
     var self = this;
 
     return function() {
-      var topic = self[SUBSCRIPTIONS_FIELD][eventName];
-
-      if (!topic) {
-        return;
-      }
-
-      var index = topic.indexOf(listener);
-
-      if (index !== -1) {
-        topic.splice(index, 1);
-      }
+      self.off(eventName, listener);
     };
   },
 
