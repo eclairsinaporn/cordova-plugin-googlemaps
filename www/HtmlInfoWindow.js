@@ -236,9 +236,9 @@ HTMLInfoWindow.prototype.open = function(marker) {
     map.fromLatLngToPoint(marker.getPosition(), function(point) {
         map.set("infoPosition", {x: point[0], y: point[1]});
 
-        map.bindTo("infoPosition", self);
-        marker.bindTo("infoWindowAnchor", self);
-        marker.bindTo("icon", self);
+        map.sync("infoPosition", self);
+        marker.sync("infoWindowAnchor", self);
+        marker.sync("icon", self);
         marker.on(event.INFO_CLOSE, self.close.bind(self));
         self.set("marker", marker);
         map.set("active_marker_id", marker.getId());
