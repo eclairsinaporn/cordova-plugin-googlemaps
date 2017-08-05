@@ -27,7 +27,7 @@
   "bugs": {
     "url": "https://github.com/stalniy/cordova-plugin-googlemaps/issues"
   },
-  "homepage": "https://github.com/stalniy/cordova-plugin-googlemaps#readme"
+  "homepage": "https://github.com/stalniy/cordova-plugin-googlemaps#readme",
   "devDependencies": {
     "chai": "^4.1.0",
     "chai-spies": "^0.7.1",

@@ -170,7 +170,7 @@ describe('BaseClass', function() {
     })
   })
 
-  describe('`sync` method', function() {
+  describe('`bindTo` method', function() {
     var anotherModel
 
     beforeEach(function() {
@@ -179,14 +179,14 @@ describe('BaseClass', function() {
 
     it('synchronizes property between 2 models', function() {
       model.set('active', true)
-      model.sync('active', { with: anotherModel })
+      model.bindTo('active', anotherModel)
       model.set('active', false)
 
       expect(anotherModel.get('active')).to.be.false
     })
 
     it('synchronizes property for 2 models', function() {
-      model.sync('active', { with: anotherModel, field: 'visible' })
+      model.bindTo('active', anotherModel, 'visible')
       model.set('active', true)
 
       expect(anotherModel.get('visible')).to.be.true
@@ -196,7 +196,7 @@ describe('BaseClass', function() {
       var listener = spy()
 
       anotherModel.on('active_changed', listener)
-      model.sync('active', { with: anotherModel })
+      model.bindTo('active', anotherModel)
       model.set('active', true)
 
       expect(listener).to.have.been.called()
@@ -206,7 +206,7 @@ describe('BaseClass', function() {
       var listener = spy()
 
       anotherModel.on('active_changed', listener)
-      model.sync('active', { with: anotherModel, silent: true })
+      model.bindTo('active', anotherModel, null, true)
       model.set('active', false)
 
       expect(listener).not.to.have.been.called()
