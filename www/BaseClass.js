@@ -35,18 +35,10 @@ BaseClass.prototype = {
   },
 
   bindTo: function(key, target, targetKey, noNotify) {
-    console.warn('[GoogleMaps] bindTo is deprecated. Please use `sync(key, target, { targetKey, silent })` instead');
-
-    return this.sync(key, target, { targetKey: targetKey, silent: noNotify });
-  },
-
-  sync: function(key, target, options) {
-    options = options || {};
-    var targetKey = options.targetKey || key;
-    var isSilent = options.silent;
+    var targetKey = targetKey || key;
 
     this.on(key + '_changed', function(oldValue, value) {
-      target.set(targetKey, value, isSilent);
+      target.set(targetKey, value, noNotify);
     });
   },
 
@@ -73,17 +65,7 @@ BaseClass.prototype = {
     var self = this;
 
     return function() {
-      var topic = self[SUBSCRIPTIONS_FIELD][eventName];
-
-      if (!topic) {
-        return;
-      }
-
-      var index = topic.indexOf(listener);
-
-      if (index !== -1) {
-        topic.splice(index, 1);
-      }
+      self.off(eventName, listener);
     };
   },
 
@@ -126,6 +108,10 @@ BaseClass.prototype = {
     return false;
   }
 };
+
+BaseClass.prototype.addEventListener = BaseClass.prototype.on;
+BaseClass.prototype.addEventListenerOnce = BaseClass.prototype.one;
+BaseClass.prototype.removeEventListener = BaseClass.prototype.off;
 
 function createError(message, methodName, args) {
   var error = new Error(methodName ? [
