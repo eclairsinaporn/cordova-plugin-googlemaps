@@ -22,7 +22,7 @@
     self.clickable = YES;
     self.isRenderedAtOnce = NO;
     self.mapDivId = nil;
-    self.objects = [NSMutableDictionary dictionary];
+    self.objects = [[NSMutableDictionary alloc] init];
     self.executeQueue =  [NSOperationQueue new];
     self.executeQueue.maxConcurrentOperationCount = 10;
 
@@ -607,7 +607,7 @@
   //CDVPlugin<MyPlgunProtocol> *plugin = [self.plugins objectForKey:pluginId];
 
   // Get the marker properties
-  NSString *markerPropertyId = [NSString stringWithFormat:@"marker_property_%lu", (unsigned long)marker.hash];
+  NSString *markerPropertyId = [NSString stringWithFormat:@"marker_property_%lu", (unsigned long)marker.userData];
   NSDictionary *properties = [self.objects objectForKey:markerPropertyId];
   Boolean useHtmlInfoWnd = marker.title == nil && marker.snippet == nil;
 

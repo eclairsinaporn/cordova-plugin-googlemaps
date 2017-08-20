@@ -53,7 +53,10 @@ public class MyPluginLayout extends FrameLayout implements ViewTreeObserver.OnSc
   public boolean stopFlag = false;
   public boolean needUpdatePosition = false;
   public boolean isSuspended = false;
+  public boolean pauseResize = false;
   private float zoomScale;
+  public final Object timerLock = new Object();
+  public boolean isWaiting = false;
 
   public Timer redrawTimer;
 
@@ -73,9 +76,18 @@ public class MyPluginLayout extends FrameLayout implements ViewTreeObserver.OnSc
   private class ResizeTask extends TimerTask {
     @Override
     public void run() {
-      if (isSuspended) {
+      if (isSuspended || pauseResize) {
+        synchronized (timerLock) {
+          isWaiting = true;
+          try {
+            timerLock.wait();
+          } catch (InterruptedException e) {
+            e.printStackTrace();
+          }
+        }
         return;
       }
+      isWaiting = false;
       //final PluginMap pluginMap = pluginMaps.get(mapId);
       //if (pluginMap.mapDivId == null) {
       //  return;
@@ -148,7 +160,7 @@ public class MyPluginLayout extends FrameLayout implements ViewTreeObserver.OnSc
               params.height = height;
               params.leftMargin = x;
               params.topMargin = y;
-              //Log.d("MyPluginLayout", "-->FrameLayout y = " + y + ", topMargin = " + params.topMargin + ", drawRect.top = " + drawRect.top);
+              //Log.d("MyPluginLayout", "-->FrameLayout x = " + x + ", y = " + y + ", w = " + params.width + ", h = " + params.height);
               pluginMap.mapView.setLayoutParams(params);
 
             }

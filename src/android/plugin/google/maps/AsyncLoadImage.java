@@ -127,12 +127,14 @@ public class AsyncLoadImage extends AsyncTask<Void, Void, AsyncLoadImage.AsyncLo
       mOptions.url = PluginUtil.getAbsolutePathFromCDVFilePath(resourceApi, mOptions.url);
     }
 
-    this.currentPageUrl = webView.getUrl();
+    this.currentPageUrl = CordovaGoogleMaps.CURRENT_URL; //webView.getUrl();
+    //Log.d(TAG, "-->currentPageUrl = " + this.currentPageUrl);
 
-    View browserView = webView.getView();
-    String browserViewName = browserView.getClass().getName();
-    this.userAgent = "";
+    //View browserView = webView.getView();
+    //String browserViewName = browserView.getClass().getName();
+    this.userAgent = "Mozilla";
 
+    /*
     if("org.xwalk.core.XWalkView".equals(browserViewName) ||
         "org.crosswalk.engine.XWalkCordovaView".equals(browserViewName)) {
 
@@ -153,6 +155,7 @@ public class AsyncLoadImage extends AsyncTask<Void, Void, AsyncLoadImage.AsyncLo
     } else {
       this.userAgent = ((WebView) webView.getEngine().getView()).getSettings().getUserAgentString();
     }
+    */
 
   }
 
@@ -161,6 +164,7 @@ public class AsyncLoadImage extends AsyncTask<Void, Void, AsyncLoadImage.AsyncLo
     int mWidth = mOptions.width;
     int mHeight = mOptions.height;
     String iconUrl = mOptions.url;
+    String orgIconUrl = iconUrl;
     Bitmap image = null;
 
     if (iconUrl == null) {
@@ -168,21 +172,93 @@ public class AsyncLoadImage extends AsyncTask<Void, Void, AsyncLoadImage.AsyncLo
     }
 
     String cacheKey = null;
+    cacheKey = getCacheKey(orgIconUrl, mWidth, mHeight);
+
+    image = getBitmapFromMemCache(cacheKey);
+    if (image != null) {
+      AsyncLoadImageResult result = new AsyncLoadImageResult();
+      result.image = image;
+      result.cacheHit = true;
+      result.cacheKey = cacheKey;
+      return result;
+    }
+
+    //Log.d(TAG, "--> iconUrl = " + iconUrl);
+    //--------------------------------
+    // Load image from local path
+    //--------------------------------
+    if (!iconUrl.startsWith("data:image")) {
+      if (!iconUrl.contains("://") &&
+          !iconUrl.startsWith("/") &&
+          !iconUrl.startsWith("www/") &&
+          !iconUrl.startsWith("data:image") &&
+          !iconUrl.startsWith("./") &&
+          !iconUrl.startsWith("../")) {
+        iconUrl = "./" + iconUrl;
+        //Log.d(TAG, "--> iconUrl = " + iconUrl);
+      }
+
+      if (iconUrl.startsWith("./") || iconUrl.startsWith("../")) {
+        iconUrl = iconUrl.replace("(\\.\\/)+", "./");
+        String currentPage = this.currentPageUrl;
+        currentPage = currentPage.replaceAll("[^\\/]*$", "");
+        currentPage = currentPage.replaceAll("#.*$", "");
+        currentPage = currentPage.replaceAll("\\/[^\\/]+\\.[^\\/]+$", "");
+        if (!currentPage.endsWith("/")) {
+          currentPage = currentPage + "/";
+        }
+        iconUrl = currentPage + iconUrl;
+        iconUrl = iconUrl.replaceAll("(\\/\\.\\/+)+", "/");
+        //Log.d(TAG, "--> iconUrl = " + iconUrl);
+      }
+
+      if (iconUrl.indexOf("file://") == 0 &&
+          !iconUrl.contains("file:///android_asset/")) {
+        iconUrl = iconUrl.replace("file://", "");
+      } else {
+        //Log.d(TAG, "--> iconUrl = " + iconUrl);
+
+        if (iconUrl.indexOf("file:///android_asset/") == 0) {
+          iconUrl = iconUrl.replace("file:///android_asset/", "");
+        }
+
+        //Log.d(TAG, "iconUrl = " + iconUrl);
+        if (iconUrl.contains("./")) {
+          try {
+            boolean isAbsolutePath = iconUrl.startsWith("/");
+            File relativePath = new File(iconUrl);
+            iconUrl = relativePath.getCanonicalPath();
+            //Log.d(TAG, "iconUrl = " + iconUrl);
+            if (!isAbsolutePath) {
+              iconUrl = iconUrl.substring(1);
+            }
+            //Log.d(TAG, "iconUrl = " + iconUrl);
+          } catch (Exception e) {
+            e.printStackTrace();
+          }
+        }
+      }
+    }
+
+    cacheKey = getCacheKey(iconUrl, mWidth, mHeight);
+
+    image = getBitmapFromMemCache(cacheKey);
+    if (image != null) {
+      AsyncLoadImageResult result = new AsyncLoadImageResult();
+      result.image = image;
+      result.cacheHit = true;
+      result.cacheKey = cacheKey;
+      return result;
+    }
+
+    cacheKey = getCacheKey(orgIconUrl, mWidth, mHeight);
+
     if (iconUrl.indexOf("http") == 0) {
       //--------------------------------
       // Load image from the Internet
       //--------------------------------
       try {
-        cacheKey = getCacheKey(iconUrl, mWidth, mHeight);
         URL url = new URL(iconUrl);
-        image = getBitmapFromMemCache(cacheKey);
-        if (image != null) {
-          AsyncLoadImageResult result = new AsyncLoadImageResult();
-          result.image = image;
-          result.cacheHit = true;
-          result.cacheKey = cacheKey;
-          return result;
-        }
 
         boolean redirect = true;
         HttpURLConnection http = null;
@@ -296,6 +372,25 @@ public class AsyncLoadImage extends AsyncTask<Void, Void, AsyncLoadImage.AsyncLo
 
 
     } else {
+      //Log.d(TAG, "--> iconUrl = " + iconUrl);
+      if (iconUrl.indexOf("data:image/") == 0 && iconUrl.contains(";base64,")) {
+
+
+        String[] tmp = iconUrl.split(",");
+        image = PluginUtil.getBitmapFromBase64encodedImage(tmp[1]);
+      } else {
+        AssetManager assetManager = cordova.getActivity().getAssets();
+        InputStream inputStream;
+        try {
+          inputStream = assetManager.open(iconUrl);
+          image = BitmapFactory.decodeStream(inputStream);
+          inputStream.close();
+        } catch (IOException e) {
+          e.printStackTrace();
+          return null;
+        }
+      }
+      /*
       //--------------------------------
       // Load image from local path
       //--------------------------------
@@ -306,13 +401,21 @@ public class AsyncLoadImage extends AsyncTask<Void, Void, AsyncLoadImage.AsyncLo
           !iconUrl.startsWith("./") &&
           !iconUrl.startsWith("../")) {
         iconUrl = "./" + iconUrl;
+        Log.d(TAG, "--> iconUrl = " + iconUrl);
       }
 
       if (iconUrl.startsWith("./") || iconUrl.startsWith("../")) {
         iconUrl = iconUrl.replace("(\\.\\/)+", "./");
         String currentPage = this.currentPageUrl;
         currentPage = currentPage.replaceAll("[^\\/]*$", "");
-        iconUrl = currentPage + "/" + iconUrl;
+        currentPage = currentPage.replaceAll("#.*$", "");
+        currentPage = currentPage.replaceAll("\\/[^\\/]+\\.[^\\/]+$", "");
+        if (!currentPage.endsWith("/")) {
+          currentPage = currentPage + "/";
+        }
+        iconUrl = currentPage + iconUrl;
+        iconUrl = iconUrl.replaceAll("(\\/\\.\\/+)+", "/");
+        Log.d(TAG, "--> iconUrl = " + iconUrl);
       }
 
       if (iconUrl.indexOf("data:image/") == 0 && iconUrl.contains(";base64,")) {
@@ -353,7 +456,7 @@ public class AsyncLoadImage extends AsyncTask<Void, Void, AsyncLoadImage.AsyncLo
           return null;
         }
       } else {
-        //Log.d(TAG, "--> iconUrl = " + iconUrl);
+        Log.d(TAG, "--> iconUrl = " + iconUrl);
         cacheKey = getCacheKey(iconUrl, mWidth, mHeight);
         image = getBitmapFromMemCache(cacheKey);
 
@@ -365,46 +468,38 @@ public class AsyncLoadImage extends AsyncTask<Void, Void, AsyncLoadImage.AsyncLo
           return result;
         }
 
-        //Log.d(TAG, "iconUrl = " + iconUrl);
+        Log.d(TAG, "iconUrl = " + iconUrl);
         if (iconUrl.indexOf("file:///android_asset/") == 0) {
           iconUrl = iconUrl.replace("file:///android_asset/", "");
         }
 
-        //Log.d(TAG, "iconUrl = " + iconUrl);
+        Log.d(TAG, "iconUrl = " + iconUrl);
         if (iconUrl.contains("./")) {
           try {
             boolean isAbsolutePath = iconUrl.startsWith("/");
             File relativePath = new File(iconUrl);
             iconUrl = relativePath.getCanonicalPath();
-            //Log.d(TAG, "iconUrl = " + iconUrl);
+            Log.d(TAG, "iconUrl = " + iconUrl);
             if (!isAbsolutePath) {
               iconUrl = iconUrl.substring(1);
             }
-            //Log.d(TAG, "iconUrl = " + iconUrl);
+            Log.d(TAG, "iconUrl = " + iconUrl);
           } catch (Exception e) {
             e.printStackTrace();
           }
         }
+        */
 
-        AssetManager assetManager = cordova.getActivity().getAssets();
-        InputStream inputStream;
-        try {
-          inputStream = assetManager.open(iconUrl);
-          image = BitmapFactory.decodeStream(inputStream);
-          inputStream.close();
-        } catch (IOException e) {
-          e.printStackTrace();
-          return null;
-        }
-      }
+      //}
 
       if (mWidth > 0 && mHeight > 0) {
         mWidth = Math.round(mWidth * density);
         mHeight = Math.round(mHeight * density);
         image = PluginUtil.resizeBitmap(image, mWidth, mHeight);
+      } else {
+        image = PluginUtil.scaleBitmapForDevice(image);
       }
 
-      image = PluginUtil.scaleBitmapForDevice(image);
       AsyncLoadImageResult result = new AsyncLoadImageResult();
       result.image = image;
       result.cacheHit = false;

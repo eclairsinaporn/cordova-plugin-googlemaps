@@ -79,6 +79,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
           if (pluginMap.objects.containsKey(objectId)) {
             if (objectId.startsWith("marker_") &&
                 !objectId.startsWith("marker_property_") &&
+                !objectId.startsWith("marker_imageSize_") &&
                 !objectId.startsWith("marker_icon_")) {
               Marker marker = (Marker) pluginMap.objects.remove(objectId);
               _removeMarker(marker);
@@ -161,6 +162,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
             if (pluginMap.objects.containsKey(objectId)) {
               if (objectId.startsWith("marker_") &&
                   !objectId.startsWith("marker_property_") &&
+                  !objectId.startsWith("marker_imageSize") &&
                   !objectId.startsWith("marker_icon_")) {
                 Marker marker = (Marker) pluginMap.objects.remove(objectId);
                 marker.setIcon(null);
@@ -245,6 +247,8 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
         markerOptions.visible(opts.getBoolean("visible"));
         properties.put("isVisible", markerOptions.isVisible());
       }
+    } else {
+      markerOptions.visible(true);
     }
     if (opts.has("draggable")) {
       markerOptions.draggable(opts.getBoolean("draggable"));
@@ -862,7 +866,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
     String id = args.getString(0);
     Marker marker = this.getMarker(id);
 
-    Bundle imageSize = (Bundle) self.pluginMap.objects.get("imageSize");
+    Bundle imageSize = (Bundle) self.pluginMap.objects.get("marker_imageSize_" + id);
     if (imageSize != null) {
       this._setIconAnchor(marker, anchorX, anchorY, imageSize.getInt("width"), imageSize.getInt("height"));
     }
@@ -882,7 +886,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
     String id = args.getString(0);
     Marker marker = this.getMarker(id);
 
-    Bundle imageSize = (Bundle) self.pluginMap.objects.get("imageSize");
+    Bundle imageSize = (Bundle) self.pluginMap.objects.get("marker_imageSize_" + id);
     if (imageSize != null) {
       this._setInfoWindowAnchor(marker, anchorX, anchorY, imageSize.getInt("width"), imageSize.getInt("height"));
     }
@@ -998,7 +1002,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
     options.height = height;
     options.noCaching = noCaching;
 
-    final AsyncLoadImage task = new AsyncLoadImage(cordova, webView, options, new AsyncLoadImageInterface() {
+    AsyncLoadImage task = new AsyncLoadImage(cordova, webView, options, new AsyncLoadImageInterface() {
       @Override
       public void onPostExecute(AsyncLoadImage.AsyncLoadImageResult result) {
         if (result == null || result.image == null) {
@@ -1054,7 +1058,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
         Bundle imageSize = new Bundle();
         imageSize.putInt("width", result.image.getWidth());
         imageSize.putInt("height", result.image.getHeight());
-        self.pluginMap.objects.put("imageSize", imageSize);
+        self.pluginMap.objects.put("marker_imageSize_" + marker.getTag(), imageSize);
 
         // The `anchor` of the `icon` property
         if (iconProperty.containsKey("anchor")) {
@@ -1076,19 +1080,14 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
         callback.onPostExecute(marker);
       }
     });
-    cordova.getActivity().runOnUiThread(new Runnable() {
-      @Override
-      public void run() {
-        task.execute();
-      }
-    });
+    task.execute();
     iconLoadingTasks.add(task);
   }
 
   private void _setIconAnchor(final Marker marker, double anchorX, double anchorY, final int imageWidth, final int imageHeight) {
     // The `anchor` of the `icon` property
-    anchorX = anchorX * this.density;
-    anchorY = anchorY * this.density;
+    anchorX = anchorX * density;
+    anchorY = anchorY * density;
     final double fAnchorX = anchorX;
     final double fAnchorY = anchorY;
     cordova.getActivity().runOnUiThread(new Runnable() {
@@ -1100,8 +1099,8 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
   }
   private void _setInfoWindowAnchor(final Marker marker, double anchorX, double anchorY, final int imageWidth, final int imageHeight) {
     // The `anchor` of the `icon` property
-    anchorX = anchorX * this.density;
-    anchorY = anchorY * this.density;
+    anchorX = anchorX * density;
+    anchorY = anchorY * density;
     final double fAnchorX = anchorX;
     final double fAnchorY = anchorY;
     cordova.getActivity().runOnUiThread(new Runnable() {
