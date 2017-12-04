@@ -142,8 +142,9 @@
             </feature>
         </config-file>
 
-        <framework src="com.google.android.gms:play-services-maps:+" />
-        <framework src="com.google.android.gms:play-services-location:+" />
+        <framework src="com.google.android.gms:play-services-maps:$FCM_VERSION" />
+        <framework src="com.google.android.gms:play-services-location:$FCM_VERSION" />
+        <preference name="FCM_VERSION" default="11.0.1"/>
 
         <!-- plugin src files -->
         <source-file src="src/android/plugin/google/maps/AsyncKmlParser.java" target-dir="src/plugin/google/maps" />
