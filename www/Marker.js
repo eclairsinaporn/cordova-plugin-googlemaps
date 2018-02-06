@@ -15,6 +15,10 @@ var Marker = function(map, id, markerOptions, className, _exec) {
 
     var self = this;
 
+    Object.defineProperty(self, "_isReady", {
+        value: true,
+        writable: false
+    });
     Object.defineProperty(self, "map", {
         value: map,
         writable: false
@@ -53,70 +57,66 @@ var Marker = function(map, id, markerOptions, className, _exec) {
     //-----------------------------------------------
     // Sets event listeners
     //-----------------------------------------------
-
-    if (markerOptions.infoWindow) {
-      console.log("[deprecated] the infoWindow option is deprecated. Please use event listener.");
-    }
-
-    self.on(event.INFO_OPEN, function() {
-        if (map.get("active_marker_id") === id) {
-          return;
-        }
-        map.set('active_marker_id', id);
-
-        if (markerOptions.infoWindow) {
-            markerOptions.infoWindow.open(self);
-        }
-    });
-    self.on(event.INFO_CLOSE, function() {
-
-        if (markerOptions.infoWindow) {
-            markerOptions.infoWindow.close(self);
-        }
-    });
     self.on(event.MARKER_CLICK, function() {
-        self.trigger(event.INFO_OPEN);
+      self.showInfoWindow.apply(self);
     });
 
-
-    self.on("position_changed", function(oldValue, position) {
-        exec(null, self.errorHandler, self.getPluginName(), 'setPosition', [self.getId(), position.lat, position.lng]);
+    self.on("position_changed", function() {
+        var position = self.get("position");
+        exec.call(self, null, self.errorHandler, self.getPluginName(), 'setPosition', [self.getId(), position.lat, position.lng]);
     });
-    self.on("rotation_changed", function(oldValue, rotation) {
-        exec(null, self.errorHandler, self.getPluginName(), 'setRotation', [self.getId(), rotation]);
+    self.on("rotation_changed", function() {
+        var rotation = self.get("rotation");
+        exec.call(self, null, self.errorHandler, self.getPluginName(), 'setRotation', [self.getId(), rotation]);
     });
-    self.on("snippet_changed", function(oldValue, snippet) {
-        exec(null, self.errorHandler, self.getPluginName(), 'setSnippet', [self.getId(), snippet]);
+    self.on("snippet_changed", function() {
+        var snippet = self.get("snippet");
+        exec.call(self, null, self.errorHandler, self.getPluginName(), 'setSnippet', [self.getId(), snippet]);
     });
-    self.on("visible_changed", function(oldValue, visible) {
-        exec(null, self.errorHandler, self.getPluginName(), 'setVisible', [self.getId(), visible]);
+    self.on("visible_changed", function() {
+        var visible = self.get("visible");
+        exec.call(self, null, self.errorHandler, self.getPluginName(), 'setVisible', [self.getId(), visible]);
     });
-    self.on("title_changed", function(oldValue, title) {
-        exec(null, self.errorHandler, self.getPluginName(), 'setTitle', [self.getId(), title]);
+    self.on("title_changed", function() {
+        var title = self.get("title");
+        exec.call(self, null, self.errorHandler, self.getPluginName(), 'setTitle', [self.getId(), title]);
     });
-    self.on("icon_changed", function(oldValue, url) {
-        exec(null, self.errorHandler, self.getPluginName(), 'setIcon', [self.getId(), url]);
+    self.on("icon_changed", function() {
+        var icon = self.get("icon");
+        exec.call(self, null, self.errorHandler, self.getPluginName(), 'setIcon', [self.getId(), icon]);
     });
-    self.on("flat_changed", function(oldValue, flat) {
-        exec(null, self.errorHandler, self.getPluginName(), 'setFlat', [self.getId(), flat]);
+    self.on("flat_changed", function() {
+        var flat = self.get("flat");
+        flat = flat === true;
+        exec.call(self, null, self.errorHandler, self.getPluginName(), 'setFlat', [self.getId(), flat]);
     });
-    self.on("draggable_changed", function(oldValue, draggable) {
-        exec(null, self.errorHandler, self.getPluginName(), 'setDraggable', [self.getId(), draggable]);
+    self.on("draggable_changed", function() {
+        var draggable = self.get("draggable");
+        draggable = draggable === true;
+        exec.call(self, null, self.errorHandler, self.getPluginName(), 'setDraggable', [self.getId(), draggable]);
     });
-    self.on("anchor_changed", function(oldValue, anchor) {
-        exec(null, self.errorHandler, self.getPluginName(), 'setIconAnchor', [self.getId(), anchor[0], anchor[1]]);
+    self.on("anchor_changed", function() {
+        var anchor = self.get("anchor");
+        if (!anchor) { return; }
+        exec.call(self, null, self.errorHandler, self.getPluginName(), 'setIconAnchor', [self.getId(), anchor[0], anchor[1]]);
     });
-    self.on("infoWindowAnchor_changed", function(oldValue, anchor) {
-        exec(null, self.errorHandler, self.getPluginName(), 'setInfoWindowAnchor', [self.getId(), anchor[0], anchor[1]]);
+    self.on("infoWindowAnchor_changed", function() {
+        var anchor = self.get("infoWindowAnchor");
+        if (!anchor) { return; }
+        exec.call(self, null, self.errorHandler, self.getPluginName(), 'setInfoWindowAnchor', [self.getId(), anchor[0], anchor[1]]);
     });
-    self.on("zIndex_changed", function(oldValue, zIndex) {
-        exec(null, self.errorHandler, self.getPluginName(), 'setZIndex', [self.getId(), zIndex]);
+    self.on("zIndex_changed", function() {
+        var zIndex = self.get("zIndex");
+        if (zIndex === null || zIndex === undefined) { return; }
+        exec.call(self, null, self.errorHandler, self.getPluginName(), 'setZIndex', [self.getId(), zIndex]);
     });
-    self.on("opacity_changed", function(oldValue, opacity) {
-        exec(null, self.errorHandler, self.getPluginName(), 'setOpacity', [self.getId(), opacity]);
+    self.on("opacity_changed", function() {
+        var opacity = self.get("opacity");
+        exec.call(self, null, self.errorHandler, self.getPluginName(), 'setOpacity', [self.getId(), opacity]);
     });
-    self.on("disableAutoPan_changed", function(oldValue, disableAutoPan) {
-        exec(null, self.errorHandler, self.getPluginName(), 'setDisableAutoPan', [self.getId(), disableAutoPan]);
+    self.on("disableAutoPan_changed", function() {
+        var disableAutoPan = self.get("disableAutoPan");
+        exec.call(self, null, self.errorHandler, self.getPluginName(), 'setDisableAutoPan', [self.getId(), disableAutoPan]);
     });
 
 };
@@ -125,13 +125,22 @@ utils.extend(Marker, BaseClass);
 
 Marker.prototype.remove = function(callback) {
     var self = this;
+    if (self._isRemoved) {
+      return;
+    }
+    Object.defineProperty(self, "_isRemoved", {
+        value: true,
+        writable: false
+    });
     self.trigger(event.INFO_CLOSE);     // close open infowindow, otherwise it will stay
     self.trigger(self.id + "_remove");
-    exec(function() {
+    exec.call(self, function() {
+        self.destroy();
         if (typeof callback === "function") {
             callback.call(self);
         }
-    }, self.errorHandler, self.getPluginName(), 'remove', [this.getId()]);
+    }, self.errorHandler, self.getPluginName(), 'remove', [self.getId()], {remove: true});
+
 };
 
 Marker.prototype.getOptions = function() {
@@ -178,7 +187,7 @@ Marker.prototype.setAnimation = function(animation, callback) {
     }
     this.set("animation", animation);
 
-    exec(function() {
+    exec.call(self, function() {
         if (typeof callback === "function") {
             callback.call(self);
         }
@@ -249,6 +258,9 @@ Marker.prototype.setTitle = function(title) {
 Marker.prototype.setVisible = function(visible) {
     visible = common.parseBoolean(visible);
     this.set('visible', visible);
+    if (!visible && this.map.get("active_marker_id") === this.id) {
+        this.map.set("active_marker_id", undefined);
+    }
     return this;
 };
 Marker.prototype.getTitle = function() {
@@ -273,21 +285,28 @@ Marker.prototype.getRotation = function() {
     return this.get('rotation');
 };
 Marker.prototype.showInfoWindow = function() {
-    exec(null, this.errorHandler, this.getPluginName(), 'showInfoWindow', [this.getId()]);
+    //if (!this.get("title") && !this.get("snippet") ||
+    //    this.get("isInfoWindowVisible")) {
+    if (!this.get("title") && !this.get("snippet")) {
+        return;
+    }
+    this.set("isInfoWindowVisible", true);
+    this.map.set("active_marker_id", this.id);
+    exec.call(this, null, this.errorHandler, this.getPluginName(), 'showInfoWindow', [this.getId()], {sync: true});
     return this;
 };
 Marker.prototype.hideInfoWindow = function() {
-    var map = this.getMap();
-    if (map) {
-      map.set('active_marker_id', undefined);
+    if (this.map.get("active_marker_id") === this.id) {
+      this.map.set("active_marker_id", null);
     }
-    exec(null, this.errorHandler, this.getPluginName(), 'hideInfoWindow', [this.getId()]);
+    if (this.get("isInfoWindowVisible")) {
+        this.set("isInfoWindowVisible", false);
+        exec.call(this, null, this.errorHandler, this.getPluginName(), 'hideInfoWindow', [this.getId()], {sync: true});
+    }
     return this;
 };
 Marker.prototype.isInfoWindowShown = function() {
-    var map = this.getMap();
-    return map && (map.get('active_marker_id') === this.id ||
-      this.get("infoWindow"));
+    return this.get("isInfoWindowVisible") === true;
 };
 Marker.prototype.isVisible = function() {
     return this.get("visible") === true;
