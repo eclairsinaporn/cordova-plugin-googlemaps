@@ -345,22 +345,17 @@ public class PluginMap extends MyPlugin implements OnMarkerClickListener,
                 JSONObject controls = params.getJSONObject("controls");
 
                 if (controls.has("myLocationButton") || controls.has("myLocation")) {
-                  final Boolean isButtonVisible = controls.has("myLocationButton") && controls.getBoolean("myLocationButton");
-                  final Boolean isLocationEnabled = isButtonVisible || controls.has("myLocation") && controls.getBoolean("myLocation");
+                  final JSONArray args = new JSONArray();
+                  args.put(controls);
 
                   cordova.getThreadPool().submit(new Runnable() {
                     @Override
                     public void run() {
-                      if (isLocationEnabled) {
-                        try {
-                          JSONObject args = new JSONObject();
-                          args.put("isButtonVisible", isButtonVisible);
-                          args.put("isLocationEnabled", isLocationEnabled);
-                          PluginMap.this.setMyLocationEnabled(args, callbackContext);
-                        } catch (JSONException e) {
-                          e.printStackTrace();
-                          callbackContext.error(e.getMessage() + "");
-                        }
+                      try {
+                        PluginMap.this.setMyLocationEnabled(args, callbackContext);
+                      } catch (JSONException e) {
+                        e.printStackTrace();
+                        callbackContext.error(e.getMessage() + "");
                       }
                     }
                   });
@@ -1288,14 +1283,9 @@ public class PluginMap extends MyPlugin implements OnMarkerClickListener,
             if (controls.has("mapToolbar")) {
               settings.setMapToolbarEnabled(controls.getBoolean("mapToolbar"));
             }
-            if (controls.has("myLocationButton") || controls.has("myLocation")) {
-              final boolean isButtonVisible = controls.has("myLocationButton") && controls.getBoolean("myLocationButton");
-              final boolean isLocationEnabled = isButtonVisible || controls.has("myLocation") && controls.getBoolean("myLocation");
-              settings.setMyLocationButtonEnabled(isButtonVisible);
-
-              JSONObject args = new JSONObject();
-              args.put("isButtonVisible", isButtonVisible);
-              args.put("isLocationEnabled", isLocationEnabled);
+            if (controls.has("myLocation") || controls.has("myLocationButton")) {
+              JSONArray args = new JSONArray();
+              args.put(controls);
               PluginMap.this.setMyLocationEnabled(args, callbackContext);
             } else {
                 callbackContext.success();
@@ -1701,7 +1691,7 @@ public class PluginMap extends MyPlugin implements OnMarkerClickListener,
    * @param callbackContext
    * @throws JSONException
    */
-  public void setMyLocationEnabled(final JSONObject args, final CallbackContext callbackContext) throws JSONException {
+  public void setMyLocationEnabled(final JSONArray args, final CallbackContext callbackContext) throws JSONException {
 
     // Request geolocation permission.
     boolean locationPermission = cordova.hasPermission("android.permission.ACCESS_COARSE_LOCATION");
@@ -1726,27 +1716,32 @@ public class PluginMap extends MyPlugin implements OnMarkerClickListener,
     }
     final JSONObject params = args.getJSONObject(0);
 
-    final boolean isLocationEnabled = args.getBoolean("isLocationEnabled");
-    final boolean isButtonVisible = args.getBoolean("isButtonVisible");
-
     this.activity.runOnUiThread(new Runnable() {
       @SuppressLint("MissingPermission")
       @Override
       public void run() {
         try {
-          map.setMyLocationEnabled(isLocationEnabled);
+          Boolean isMyLocationEnabled = false;
+          if (params.has("myLocation")) {
+            isMyLocationEnabled = params.getBoolean("myLocation");
+            map.setMyLocationEnabled(isMyLocationEnabled);
+          }
 
-          if (!isLocationEnabled && isButtonVisible) {
+          Boolean isMyLocationButtonEnabled = false;
+          if (params.has("myLocationButton")) {
+            isMyLocationButtonEnabled = params.getBoolean("myLocationButton");
+            map.getUiSettings().setMyLocationButtonEnabled(isMyLocationButtonEnabled);
+          }
+          //Log.d(TAG, "--->isMyLocationButtonEnabled = " + isMyLocationButtonEnabled + ", isMyLocationEnabled = " + isMyLocationEnabled);
+          if (!isMyLocationEnabled && isMyLocationButtonEnabled) {
             dummyMyLocationButton.setVisibility(View.VISIBLE);
           } else {
             dummyMyLocationButton.setVisibility(View.GONE);
           }
 
-          map.getUiSettings().setMyLocationButtonEnabled(isButtonVisible);
-        } catch (SecurityException e) {
+        } catch (Exception e) {
           e.printStackTrace();
         }
-
         callbackContext.success();
       }
     });
