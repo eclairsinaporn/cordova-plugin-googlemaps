@@ -37,9 +37,9 @@ DomObserver.prototype.traceDomTree = function(element, params) {
   var position = this.addPosition(element);
   var hasMaps = Object.keys(position.containMapIDs).length > 0;
   var options = options || {};
-  var isForce = params['if'] && this[params['if']](element);
+  var isForce = options['if'] && this[options['if']](element);
 
-  if (hasMaps || position.isMap || position.pointerEvents === "none") {
+  if (hasMaps || isForce || position.isMap || position.pointerEvents === "none") {
     var children = element.getElementsByTagName('*');
 
     for (var i = 0; i < children.length; i++) {
@@ -58,27 +58,25 @@ DomObserver.prototype.traceDomTree = function(element, params) {
 };
 
 DomObserver.prototype.removeDomTree = function(element) {
-    if (!element || !element.querySelectorAll) {
-      return;
+  if (!element || !element.querySelectorAll) {
+    return;
+  }
+
+  var children = Array.prototype.slice.call(node.querySelectorAll('[__pluginDomId]'), 0);
+
+  if (element.hasAttribute('__pluginDomId')) {
+    children.push(element);
+  }
+
+  var isRemoved = element._isRemoved;
+  for (var i = 0; i < children.length; i++) {
+    var child = children[i];
+
+    if (isRemoved) {
+      this.cleanUp(child);
     }
 
-    var children = Array.prototype.slice.call(node.querySelectorAll('[__pluginDomId]'), 0);
-
-    if (element.hasAttribute('__pluginDomId')) {
-      children.push(element);
-    }
-
-    var isRemoved = element._isRemoved;
-    for (var i = 0; i < children.length; i++) {
-      var child = children[i];
-      var elemId = common.getPluginDomId(child);
-
-      if (isRemoved) {
-        this.cleanUp(child);
-      }
-
-      common._removeCacheById(elemId);
-    }
+    common._removeCacheById(common.getPluginDomId(child));
   }
 };
 
@@ -93,6 +91,7 @@ DomObserver.prototype.cleanUp = function(element) {
 
   if (element.hasAttribute('__pluginMapId')) {
     var event = document.createEvent('Events');
+    // TODO: subscribe in Map and remove it on this event `map.remove()`
     event.initEvent('gm_destroyed', false, false);
     element.dispatchEvent(event);
   }
