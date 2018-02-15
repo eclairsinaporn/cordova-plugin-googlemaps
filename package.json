@@ -1,6 +1,6 @@
 {
   "name": "cdv-googlemaps",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Google Maps native SDK for Android and iOS",
   "cordova": {
     "id": "cdv-googlemaps",
