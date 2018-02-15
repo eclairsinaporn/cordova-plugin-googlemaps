@@ -88,6 +88,9 @@
     <js-module name="geomodel" src="www/geomodel.js">
       <runs />
     </js-module>
+    <js-module name="DomObserver" src="www/DomObserver.js">
+      <runs />
+    </js-module>
 
 
     <description>Google Maps native SDK for Android and iOS</description>
