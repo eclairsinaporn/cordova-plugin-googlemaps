@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<plugin id="cdv-googlemaps" version="3.0.0-alpha-20170806-1948" xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
+<plugin id="cdv-googlemaps" version="0.0.7" xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
     <name>cdv-googlemaps</name>
     <js-module name="BaseClass" src="www/BaseClass.js">
       <runs />
