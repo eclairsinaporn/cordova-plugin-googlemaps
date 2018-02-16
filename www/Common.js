@@ -286,13 +286,16 @@ function shouldWatchByNative(node) {
 // Get z-index order
 // http://stackoverflow.com/a/24136505
 var internalCache = {};
+
 function _clearInternalCache() {
   internalCache = undefined;
   internalCache = {};
 }
+
 function _removeCacheById(elemId) {
   delete internalCache[elemId];
 }
+
 function getZIndex(dom) {
     if (dom === document.body) {
       internalCache = undefined;
@@ -302,36 +305,25 @@ function getZIndex(dom) {
       return 0;
     }
 
-    var z = 0;
-    if (window.getComputedStyle) {
-      z = document.defaultView.getComputedStyle(dom, null).getPropertyValue('z-index');
-    }
-    if (dom.currentStyle) {
-        z = dom.currentStyle['z-index'];
-    }
-    var elemId = dom.getAttribute("__pluginDomId");
+    var z = getStyle(dom, 'z-index');
+    var elemId = getPluginDomId(dom);
     var parentNode = dom.parentNode;
     var parentZIndex = 0;
     if (parentNode && parentNode.nodeType === Node.ELEMENT_NODE) {
-      var parentElemId = parentNode.getAttribute("__pluginDomId");
+      var parentElemId = getPluginDomId(parentNode);
       if (parentElemId in internalCache) {
         parentZIndex = internalCache[parentElemId];
       } else {
-        parentZIndex = getZIndex(dom.parentNode);
+        parentZIndex = getZIndex(parentNode);
         internalCache[parentElemId] = parentZIndex;
       }
     }
 
-    if (z === "auto") {
-      z = 0;
-    } else if (z === "inherit") {
-      z = 0;
-    } else if (z === "initial" || z === "unset") {
+    if (z === "auto" || z === "inherit" || z === "initial" || z === "unset") {
       z = 0;
     } else {
       z = parseInt(z);
     }
-    //dom.setAttribute("__ZIndex", z);
     internalCache[elemId] = z + parentZIndex;
     return z;
 }
@@ -340,12 +332,13 @@ function getZIndex(dom) {
 // http://stackoverflow.com/a/1388022
 function getStyle(element, styleProperty)
 {
-    if (window.getComputedStyle) {
-        return document.defaultView.getComputedStyle(element,null).getPropertyValue(styleProperty);
-    } else if (element.currentStyle) {
-      return element.currentStyle[styleProperty];
-    }
-    return;
+  if (window.getComputedStyle) {
+    return document.defaultView.getComputedStyle(element,null).getPropertyValue(styleProperty);
+  }
+
+  if (element.currentStyle) {
+    return element.currentStyle[styleProperty];
+  }
 }
 
 function getDomInfo(dom, idx) {
@@ -507,7 +500,7 @@ var HTML_COLORS = {
 };
 
 function defaultTrueOption(value) {
-    return value === undefined ? true : value === true;
+  return value === undefined || value === true;
 }
 
 function createMvcArray(array) {
@@ -708,6 +701,34 @@ function hashCode(text) {
   return hash;
 }
 
+function throttle(func, limit) {
+  var inThrottle;
+  var timerId;
+  var lastRanAt;
+
+  return function() {
+    const context = this;
+    const args = arguments;
+
+    if (!inThrottle) {
+      func.apply(context, args);
+      lastRanAt = Date.now();
+      inThrottle = true;
+    } else {
+      clearTimeout(timerId);
+      timerId = setTimeout(function() {
+        var now = Date.now();
+        var diff = now - lastRanAt;
+
+        if (diff >= limit) {
+          func.apply(context, args);
+          lastRanAt = now;
+        }
+      }, limit - diff);
+    }
+  }
+}
+
 module.exports = {
     _clearInternalCache: _clearInternalCache,
     _removeCacheById: _removeCacheById,
@@ -730,5 +751,6 @@ module.exports = {
     quickfilter: quickfilter,
     nextTick: nextTick,
     getPluginDomId: getPluginDomId,
-    hashCode: hashCode
+    hashCode: hashCode,
+    throttle: throttle
 };

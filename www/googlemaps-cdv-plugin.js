@@ -1,7 +1,7 @@
 /* global cordova, plugin, CSSPrimitiveValue */
-var cordova_exec = require('cordova/exec');
-var isSuspended = false;
+var MapsApi = require('./MapsApi');
 
+var mapsApi = new MapsApi();
 var SUPPORTS_PASSIVE = false;
 document.createElement("div").addEventListener("test", function() {}, {
   get passive() {
@@ -10,15 +10,13 @@ document.createElement("div").addEventListener("test", function() {}, {
   }
 });
 
-if (!cordova) {
+if (typeof cordova === 'undefined') {
   document.addEventListener("deviceready", function() {
-    isSuspended = true;
-    cordova_exec(null, null, 'CordovaGoogleMaps', 'pause', []);
+    mapsApi.pause();
   }, {
     once: true
   });
 } else {
-  var MAP_CNT = 0;
 
   var argscheck = require('cordova/argscheck'),
       utils = require('cordova/utils'),
@@ -47,46 +45,7 @@ if (!cordova) {
   var Environment = require('./Environment');
   var MapTypeId = require('./MapTypeId');
   var DomObserver = require('./DomObserver');
-
-  var INTERVAL_TIMER = null;
-  var MAPS = {};
-  var saltHash = Math.floor(Math.random() * Date.now());
-
-  /*****************************************************************************
-   * To prevent strange things happen,
-   * disable the changing of viewport zoom level by double clicking.
-   * This code has to run before the device ready event.
-   *****************************************************************************/
-  (function() {
-    var viewportTag = null;
-    var metaTags = document.getElementsByTagName('meta');
-    for (var i = 0; i < metaTags.length; i++) {
-        if (metaTags[i].getAttribute('name') === "viewport") {
-            viewportTag = metaTags[i];
-            break;
-        }
-    }
-    if (!viewportTag) {
-        viewportTag = document.createElement("meta");
-        viewportTag.setAttribute('name', 'viewport');
-    }
-
-    var viewportTagContent = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no';
-
-    // Detect if iOS device
-    if (/(iPhone|iPod|iPad)/i.test(window.navigator.userAgent)) {
-      // Get iOS major version
-      var iosVersion = parseInt((window.navigator.userAgent).match(/OS (\d+)_(\d+)_?(\d+)? like Mac OS X/i)[1]);
-      // Detect if device is running >iOS 11
-      // iOS 11's UIWebView and WKWebView changes the viewport behaviour to render viewport without the status bar. Need to override with "viewport-fit: cover" to include the status bar.
-      if (iosVersion >= 11) {
-        viewportTagContent += ', viewport-fit=cover';
-      }
-    }
-
-    // Update viewport tag attribute
-    viewportTag.setAttribute('content', viewportTagContent);
-  })();
+  var MapFactory = require('./MapFactory');
 
   /*****************************************************************************
    * Prevent background, background-color, background-image properties
@@ -98,7 +57,7 @@ if (!cordova) {
     "   background: transparent !important;",
     "}",
     "._gmaps_cdv_ .nav-decor {",
-    "   display:none !important;",
+    "   display: none !important;",
     "}"
   ].join('');
   document.head.appendChild(navDecorBlocker);
@@ -111,43 +70,8 @@ if (!cordova) {
       return common.nextTick(observeDOMStructure);
     }
 
-    var isChecking = false;
-
     var DOM_OBSERVER = new DomObserver();
-    var followPositionTimer = null;
-    var followPositionTimerCnt = 0;
-    var prevMapRects = {};
-    function followMapDivPositionOnly(opts) {
-      opts = opts || {};
-      var mapRects = {};
-      var mapIDs = Object.keys(MAPS);
-      var changed = false;
-      var mapId, map;
-      for (var i = 0; i < mapIDs.length; i++) {
-        mapId = mapIDs[i];
-        map = MAPS[mapId];
-        if (map && map.getVisible() && map.getDiv() && common.shouldWatchByNative(map.getDiv())) {
-          var mapDiv = map.getDiv();
-          var divId = mapDiv.getAttribute("__pluginDomId");
-          mapRects[divId] = {
-            size: common.getDivRect(mapDiv),
-            zIndex: common.getZIndex(mapDiv)
-          };
-          if (!changed && prevMapRects && (divId in prevMapRects) && (
-            prevMapRects[divId].size.left !== mapRects[divId].size.left ||
-            prevMapRects[divId].size.top !== mapRects[divId].size.top ||
-            prevMapRects[divId].size.width !== mapRects[divId].size.width ||
-            prevMapRects[divId].size.height !== mapRects[divId].size.height ||
-            prevMapRects[divId].zIndex !== mapRects[divId].zIndex)) {
-            changed = true;
-          }
-        }
-      }
-      prevMapRects = mapRects;
-      if (changed || opts.force) {
-        cordova_exec(null, null, 'CordovaGoogleMaps', 'updateMapPositionOnly', [mapRects]);
-      }
-    }
+    var MAP_FACTORY = new MapFactory(DOM_OBSERVER, mapsApi);
 
     document.body.addEventListener("transitionend", function(e) {
       var target = e.target;
@@ -156,22 +80,19 @@ if (!cordova) {
         common.nextTick(function() {
           if (target.hasAttribute("__pluginDomId")) {
             DOM_OBSERVER.traceDomTree(target, { 'if': 'isMapChild' });
-            isSuspended = true;
             isThereAnyChange = true;
-            isChecking = false;
             resetTimer({ force: true });
           }
         });
       }, 100);
-    }, SUPPORTS_PASSIVE ? { capture: true, passive: true } : true);
+    }, true);
 
     var scrollEndTimer = null;
     document.body.addEventListener("scroll", function() {
       clearTimeout(scrollEndTimer);
       scrollEndTimer = setTimeout(onScrollEnd, 100);
-      followMapDivPositionOnly();
-    }, SUPPORTS_PASSIVE ? { capture: true, passive: true } : true);
-
+      MAP_FACTORY.updateMapsPositions();
+    }, true);
     function onScrollEnd() {
       isThereAnyChange = true;
       common.nextTick(putHtmlElements);
@@ -229,182 +150,64 @@ if (!cordova) {
       }
     }
 
+    var currentOperation = null;
 
-    //----------------------------------------------
-    // Send the DOM hierarchy to native side
-    //----------------------------------------------
-    var domPositions = DOM_OBSERVER.positions;
-    var shouldUpdate = false;
-    var doNotTrace = false;
-    var checkRequested = false;
+    function rejectOperationIfCancelled(operation, value) {
+      if (operation && operation.isCancelled) {
+        return Promise.reject(new Error('Stopped by another call of "putHtmlElements"'))
+      }
+
+      return value;
+    }
 
     function putHtmlElements() {
-      var mapIDs = Object.keys(MAPS);
-      if (isChecking) {
-        checkRequested = true;
-        return;
+      if (currentOperation) {
+        currentOperation.isCancelled = true;
       }
-      checkRequested = false;
-      if (!isThereAnyChange) {
-        if (!isSuspended) {
-          //console.log("-->pause(320)");
-          cordova_exec(null, null, 'CordovaGoogleMaps', 'pause', []);
-        }
 
-        //console.log("-->isSuspended = true");
-        isSuspended = true;
+      if (!isThereAnyChange || !MAP_FACTORY.hasTouchableMaps()) {
         isThereAnyChange = false;
-        isChecking = false;
-        return;
+        return mapsApi.pause();
       }
-      isChecking = true;
-
-      //-------------------------------------------
-      // If there is no visible map, stop checking
-      //-------------------------------------------
-      var touchableMapList, i, mapId, map;
-      touchableMapList = [];
-      mapIDs = Object.keys(MAPS);
-      for (i = 0; i < mapIDs.length; i++) {
-        mapId = mapIDs[i];
-        map = MAPS[mapId];
-        if (map &&
-          map.getVisible() && map.getClickable() && map.getDiv() && common.shouldWatchByNative(map.getDiv())) {
-          touchableMapList.push(mapId);
-        }
-      }
-      if (touchableMapList.length === 0) {
-        //console.log("--->touchableMapList.length = 0");
-        if (!isSuspended) {
-          //        console.log("-->pause, isSuspended = true");
-          cordova_exec(null, null, 'CordovaGoogleMaps', 'pause', []);
-          isSuspended = true;
-          isThereAnyChange = false;
-        }
-        isChecking = false;
-        return;
-      }
-
-      if (checkRequested) {
-        //console.log("--->checkRequested");
-        setTimeout(function() {
-          isChecking = false;
-          common.nextTick(putHtmlElements);
-        }, 50);
-        return;
-      }
-      //-------------------------------------------
-      // Should the plugin update the map positions?
-      //-------------------------------------------
 
       common._clearInternalCache();
       DOM_OBSERVER.traceDomTree(document.body);
 
-      // If the map div is not displayed (such as display='none'),
-      // ignore the map temporally.
-      var stopFlag = false;
-      var mapElemIDs = [];
-      mapIDs = Object.keys(MAPS);
-      (function() {
-        var ele, mapId, div, elemId;
-        for (var i = 0; i < mapIDs.length; i++) {
-          mapId = mapIDs[i];
-          div = MAPS[mapId].getDiv();
-          if (div) {
-            elemId = div.getAttribute("__pluginDomId");
-            if (elemId) {
-              if (elemId in domPositions) {
-                mapElemIDs.push(elemId);
-              } else {
-                // Is the map div removed?
-                ele = document.querySelector("[__pluginMapId='" + mapId + "']");
-                if (!ele) {
-                  // If no div element, remove the map.
-                  if (mapId in MAPS) {
-                    MAPS[mapId].remove();
-                    return;
-                  }
-                  stopFlag = true;
-                }
-              }
-            } else {
-              // the map div is removed
-              if (mapId in MAPS) {
-                MAPS[mapId].remove();
-                return;
-              }
-              stopFlag = true;
-            }
-          // } else {
-          //   // the map div is removed
-          //   console.log("mapId = " + mapId + " is already removed");
-          //   if (mapId in MAPS) {
-          //     MAPS[mapId].remove();
-          //     return;
-          //   }
-          //   stopFlag = true;
-          }
-        }
-      })();
-      if (stopFlag) {
-        // There is no map information (maybe timining?)
-        // Try again.
-        isThereAnyChange = true;
-        setTimeout(function() {
-          isChecking = false;
-          common.nextTick(putHtmlElements);
-        }, 50);
-        return;
-      }
+      var operation = mapsApi.resume()
+        .then(function(value) {
+          return rejectOperationIfCancelled(operation, value);
+        })
+        .then(function() {
+          return mapsApi.exec('putHtmlElements', [DOM_OBSERVER.positions])
+        })
+        .then(function(value) {
+          return rejectOperationIfCancelled(operation, value);
+        })
+        .then(function() {
+          isThereAnyChange = false;
 
-      //-----------------------------------------------------------------
-      // Ignore the elements that their z-index is smaller than map div
-      //-----------------------------------------------------------------
-      if (checkRequested) {
-        setTimeout(function() {
-          isChecking = false;
-          common.nextTick(putHtmlElements);
-        }, 50);
-        return;
-      }
-      //-----------------------------------------------------------------
-      // Pass information to native
-      //-----------------------------------------------------------------
-      if (isSuspended) {
-        //console.log("-->resume(470)");
-        cordova_exec(null, null, 'CordovaGoogleMaps', 'resume', []);
-        isSuspended = false;
-      }
-      //console.log("--->putHtmlElements to native (start)", JSON.parse(JSON.stringify(domPositions)));
-      cordova_exec(function() {
-        //console.log("--->putHtmlElements to native (done)");
-        if (checkRequested) {
-          setTimeout(function() {
-            isChecking = false;
-            common.nextTick(putHtmlElements);
-          }, 50);
-          return;
-        }
-        isChecking = false;
-        isThereAnyChange = false;
-        isSuspended = true;
-        cordova_exec(null, null, 'CordovaGoogleMaps', 'pause', []);
-      }, null, 'CordovaGoogleMaps', 'putHtmlElements', [DOM_OBSERVER.positions]);
-      child = null;
-      parentNode = null;
-      elemId = null;
-      children = null;
+          if (currentOperation === operation) {
+            currentOperation = null;
+          }
+
+          return mapsApi.pause();
+        })
+        .catch(function(error) {
+          return operation.isCancelled ? Promise.resolve() : Promise.reject(error);
+        });
+
+      currentOperation = operation;
+
+      return operation;
     }
 
-    // This is the special event that is fired by the google maps plugin
-    // (Not generic plugin)
     function resetTimer(opts) {
       opts = opts || {};
 
       common.nextTick(function() {
         putHtmlElements();
         if (opts.force) {
-          followMapDivPositionOnly(opts);
+          MAP_FACTORY.updateMapsPositions(opts);
         }
       });
     }
@@ -419,7 +222,7 @@ if (!cordova) {
       var timer = setInterval(function() {
         cnt--;
         if (cnt > 0) {
-          followMapDivPositionOnly();
+          MAP_FACTORY.updateMapsPositions();
         } else {
           clearInterval(timer);
         }
@@ -430,7 +233,7 @@ if (!cordova) {
     // Stop all executions if the page will be closed.
     //----------------------------------------------------
     window.addEventListener("unload", function stopExecution() {
-      _stopRequested = true;
+      mapsApi.stopExecutionQueue();
     });
 
     /*****************************************************************************
@@ -447,154 +250,8 @@ if (!cordova) {
       BaseArrayClass: BaseArrayClass,
       Map: {
           getMap: function(div, mapOptions) {
-              var mapId, elem, elemId;
-              if (common.isDom(div)) {
-                mapId = div.getAttribute("__pluginMapId");
-                if (!mapOptions || mapOptions.visible !== false) {
-                  // Add gray color until the map is displayed.
-                  div.style.backgroundColor = "rgba(200, 200, 200, 0.5)";
-                }
-              }
-              if (mapId && MAPS[mapId].getDiv() !== div) {
-              //console.log("--->different mapdiv = " + mapId, MAPS[mapId].getDiv(), div);
-                elem = MAPS[mapId].getDiv();
-                while(elem && elem.nodeType === Node.ELEMENT_NODE) {
-                  elemId = elem.getAttribute("__pluginDomId");
-                  if (elemId && elemId in domPositions) {
-                    domPositions[elemId].containMapIDs = domPositions[elemId].containMapIDs || {};
-                    delete domPositions[elemId].containMapIDs[mapId];
-                    if ((Object.keys(domPositions[elemId].containMapIDs).length) < 1) {
-                      delete domPositions[elemId];
-                    }
-                  }
-                  elem = elem.parentNode;
-                }
-                MAPS[mapId].remove();
-                mapId = undefined;
-              }
-              if (mapId && mapId in MAPS) {
-                //--------------------------------------------------
-                // Backward compatibility for v1
-                //
-                // If the div is already recognized as map div,
-                // return the map instance
-                //--------------------------------------------------
-                return MAPS[mapId];
-              } else {
-                mapId = "map_" + MAP_CNT + "_" + saltHash;
-              }
-
-              var map = new Map(mapId, execCmd);
-
-              // Catch all events for this map instance, then pass to the instance.
-              document.addEventListener(mapId, nativeCallback.bind(map));
-              map.on('div_changed', function(oldDiv, newDiv) {
-                if (common.isDom(oldDiv)) {
-                  oldDiv.removeAttribute('__pluginMapId');
-                  var ele = oldDiv;
-                  while(ele && ele != document.body.parentNode) {
-                    elemId = ele.getAttribute('__pluginDomId');
-                    if (elemId) {
-                      domPositions[elemId].containMapIDs = domPositions[elemId].containMapIDs || {};
-                      delete domPositions[elemId].containMapIDs[mapId];
-                      if ((Object.keys(domPositions[elemId].containMapIDs)).length < 1) {
-                        delete domPositions[elemId];
-                      }
-                    }
-                    ele.removeAttribute('__pluginDomId');
-                    if (ele.classList) {
-                      ele.classList.remove('_gmaps_cdv_');
-                    } else if (ele.className) {
-                      ele.className = ele.className.replace(/_gmaps_cdv_/g, "");
-                      ele.className = ele.className.replace(/\s+/g, " ");
-                    }
-                    ele = ele.parentNode;
-                  }
-                }
-
-                if (common.isDom(newDiv)) {
-                  newDiv.setAttribute('__pluginMapId', mapId);
-                  elem = newDiv;
-                  while(elem && elem.nodeType === Node.ELEMENT_NODE) {
-                    //
-                    // if (common.getStyle(elem, "-webkit-overflow-scrolling") === "touch") {
-                    //   // Disable scrolling, becase the `scroll` events are not fired.
-                    //   elem.style["-webkit-overflow-scrolling"] = "auto";
-                    //   elem.addEventListener('touchstart', self._onTouchEvents.bind(self));
-                    //   elem.addEventListener('touchmove', self._onTouchEvents.bind(self));
-                    //   elem.addEventListener('touchend', self._onTouchEvents.bind(self));
-                    //   elem.addEventListener('touchcancel', self._onTouchEvents.bind(self));
-                    //   elem.addEventListener('touchleave', self._onTouchEvents.bind(self));
-                    // }
-                    var position = DOM_OBSERVER.addPosition(elem);
-                    position.containMapIDs[mapId] = 1;
-                    elem = elem.parentNode;
-                  }
-                }
-              });
-
-              map.one('remove', function() {
-                  document.removeEventListener(mapId, nativeCallback);
-                  var div = map.getDiv();
-                  if (!div) {
-                    div = document.querySelector("[__pluginMapId='" + mapId + "']");
-                  }
-                  if (div) {
-                    div.removeAttribute('__pluginMapId');
-                  }
-                  //console.log("--->removeMap mapId = " + mapId);
-
-                  var keys = Object.keys(domPositions);
-                  var elemId;
-                  for (var i = 0; i < keys.length; i++) {
-                    elemId = keys[i];
-                    delete domPositions[elemId].containMapIDs[mapId];
-                    if (!Object.keys(domPositions[elemId].containMapIDs).length) {
-                      delete domPositions[elemId];
-                    }
-                  }
-                  MAPS[mapId].destroy();
-                  delete MAPS[mapId];
-                  map = undefined;
-
-                  if ((Object.keys(MAPS)).length === 0) {
-                    common._clearInternalCache();
-
-                    isSuspended = true;
-                    cordova_exec(null, null, 'CordovaGoogleMaps', 'pause', []);
-                  }
-              });
-              MAP_CNT++;
-              MAPS[mapId] = map;
-              isSuspended = false;
-              isThereAnyChange = true;
-              isChecking = false;
-
-
-
-              var args = [mapId].concat(Array.prototype.slice.call(arguments, 0));
-
-              if (common.isDom(div)) {
-                div.setAttribute("__pluginMapId", mapId);
-
-                elem = div;
-                while(elem && elem.nodeType === Node.ELEMENT_NODE) {
-                  var position = DOM_OBSERVER.addPosition(elem);
-                  position.containMapIDs[mapId] = 1;
-                  elem = elem.parentNode;
-                }
-
-                cordova_exec(function() {
-                  cordova_exec(function() {
-                    map.getMap.apply(map, args);
-                  }, null, 'CordovaGoogleMaps', 'putHtmlElements', [DOM_OBSERVER.positions]);
-                }, null, 'CordovaGoogleMaps', 'resume', []);
-                //resetTimer({force: true});
-              } else {
-                map.getMap.apply(map, args);
-              }
-
-              return map;
+            isThereAnyChange = true;
+            return MAP_FACTORY.create(div, mapOptions);
           }
       },
       HtmlInfoWindow: HtmlInfoWindow,
@@ -604,7 +261,7 @@ if (!cordova) {
       MapTypeId: MapTypeId,
       environment: Environment,
       Geocoder: Geocoder,
-      LocationService: new LocationService(execCmd),
+      LocationService: new LocationService(mapsApi.execInQueue),
       geometry: {
           encoding: encoding,
           spherical: spherical,
@@ -642,147 +299,4 @@ if (!cordova) {
         once: true
       });
   });
-}
-
-/*****************************************************************************
- * Private functions
- *****************************************************************************/
-
-function onMapResize(event) {
-  var mapIDs = Object.keys(MAPS);
-  for (var i = 0; i< mapIDs.length; i++) {
-    mapId = mapIDs[i];
-    MAPS[mapId].refreshLayout();
-  }
-}
-
-function nativeCallback(params) {
-  var args = params.args || [];
-  args.unshift(params.evtName);
-  this[params.callback].apply(this, args);
-}
-
-/*****************************************************************************
- * Command queue mechanism
- * (Save the number of method executing at the same time)
- *****************************************************************************/
-var commandQueue = [];
-var _isWaitMethod = null;
-var _isExecuting = false;
-var _executingCnt = 0;
-var MAX_EXECUTE_CNT = 10;
-var _lastGetMapExecuted = 0;
-var _isResizeMapExecuting = false;
-var _stopRequested = false;
-
-
-function execCmd(success, error, pluginName, methodName, args, execOptions) {
-  execOptions = execOptions || {};
-  if (this._isRemoved && !execOptions.remove) {
-    // Ignore if the instance is already removed.
-    console.error("[ignore]" + pluginName + "." + methodName + ", because removed.");
-    return true;
-  }
-  if (!this._isReady) {
-    // Ignore if the instance is not ready.
-    console.error("[ignore]" + pluginName + "." + methodName + ", because it's not ready.");
-    return true;
-  }
-  var self = this;
-  commandQueue.push({
-    "execOptions": execOptions,
-    "args": [function() {
-      //console.log("success: " + methodName);
-      if (methodName === "resizeMap") {
-        _isResizeMapExecuting = false;
-      }
-      if (!_stopRequested && success) {
-        var results = [];
-        for (var i = 0; i < arguments.length; i++) {
-          results.push(arguments[i]);
-        }
-        common.nextTick(function() {
-          success.apply(self,results);
-        });
-      }
-
-      var delay = 0;
-      if (methodName === _isWaitMethod) {
-        // Prevent device crash when the map.getMap() executes multiple time in short period
-        if (_isWaitMethod === "getMap" && Date.now() - _lastGetMapExecuted < 1500) {
-          delay = 1500;
-        }
-        _lastGetMapExecuted = Date.now();
-        _isWaitMethod = null;
-      }
-      setTimeout(function() {
-        _executingCnt--;
-        common.nextTick(_exec);
-      }, delay);
-    }, function() {
-      //console.log("error: " + methodName);
-      if (methodName === "resizeMap") {
-        _isResizeMapExecuting = false;
-      }
-      if (!_stopRequested && error) {
-        var results = [];
-        for (var i = 0; i < arguments.length; i++) {
-          results.push(arguments[i]);
-        }
-        common.nextTick(function() {
-          error.apply(self,results);
-        });
-      }
-
-      if (methodName === _isWaitMethod) {
-        _isWaitMethod = null;
-      }
-      _executingCnt--;
-      common.nextTick(_exec);
-    }, pluginName, methodName, args]
-  });
-
-  //console.log("commandQueue.length: " + commandQueue.length, commandQueue);
-  if (_isExecuting || _executingCnt >= MAX_EXECUTE_CNT ) {
-    return;
-  }
-  common.nextTick(_exec);
-}
-function _exec() {
-  //console.log("commandQueue.length: " + commandQueue.length);
-  if (_isExecuting || _executingCnt >= MAX_EXECUTE_CNT || _isWaitMethod || commandQueue.length === 0) {
-    return;
-  }
-  _isExecuting = true;
-
-  var methodName;
-  while (commandQueue.length > 0 && _executingCnt < MAX_EXECUTE_CNT) {
-    if (!_stopRequested) {
-      _executingCnt++;
-    }
-    var commandParams = commandQueue.shift();
-    methodName = commandParams.args[3];
-    //console.log("target: " + methodName);
-    if (methodName === "resizeMap") {
-      if (_isResizeMapExecuting) {
-        _executingCnt--;
-        continue;
-      }
-      _isResizeMapExecuting = true;
-    }
-    if (_stopRequested && (!commandParams.execOptions.remove || methodName !== "clear")) {
-      _executingCnt--;
-      continue;
-    }
-    //console.log("start: " + methodName);
-    if (commandParams.execOptions.sync) {
-      _isWaitMethod = methodName;
-      cordova_exec.apply(this, commandParams.args);
-      break;
-    }
-    cordova_exec.apply(this, commandParams.args);
-  }
-  //console.log("commandQueue.length: " + commandQueue.length);
-  _isExecuting = false;
-
 }

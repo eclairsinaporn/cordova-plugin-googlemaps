@@ -1356,4 +1356,8 @@ Map.prototype._onCameraEvent = function(eventName, cameraPosition) {
   }
 };
 
+Map.prototype.isTouchable = function() {
+  return this.getVisible() && this.getClickable() && this.getDiv() && common.shouldWatchByNative(this.getDiv());
+}
+
 module.exports = Map;

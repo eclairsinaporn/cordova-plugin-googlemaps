@@ -6,6 +6,20 @@ function canSkip(element) {
   return SKIP_TAGS[element.tagName.toLowerCase()] || !common.shouldWatchByNative(element);
 }
 
+function isEmptyObject(object) {
+  if (!object) {
+    return true;
+  }
+
+  for (var prop in object) {
+    if (object.hasOwnProperty(prop)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 function DomObserver() {
   this.positions = {};
 }
@@ -35,11 +49,10 @@ DomObserver.prototype.traceDomTree = function(element, params) {
   }
 
   var position = this.addPosition(element);
-  var hasMaps = Object.keys(position.containMapIDs).length > 0;
   var options = options || {};
   var isForce = options['if'] && this[options['if']](element);
 
-  if (hasMaps || isForce || position.isMap || position.pointerEvents === "none") {
+  if (!isEmptyObject(position.containMapIDs) || isForce || position.isMap || position.pointerEvents === "none") {
     var children = element.getElementsByTagName('*');
 
     for (var i = 0; i < children.length; i++) {
@@ -62,7 +75,7 @@ DomObserver.prototype.removeDomTree = function(element) {
     return;
   }
 
-  var children = Array.prototype.slice.call(node.querySelectorAll('[__pluginDomId]'), 0);
+  var children = Array.prototype.slice.call(element.querySelectorAll('[__pluginDomId]'), 0);
 
   if (element.hasAttribute('__pluginDomId')) {
     children.push(element);
@@ -91,12 +104,42 @@ DomObserver.prototype.cleanUp = function(element) {
 
   if (element.hasAttribute('__pluginMapId')) {
     var event = document.createEvent('Events');
-    // TODO: subscribe in Map and remove it on this event `map.remove()`
     event.initEvent('gm_destroyed', false, false);
     element.dispatchEvent(event);
   }
 
   delete this.positions[elemId];
 };
+
+DomObserver.prototype.deleteMapFromTree = function(mapNode) {
+  var elem = mapNode;
+  var mapId = mapNode.getAttribute('__pluginMapId');
+
+  while(elem && elem.nodeType === Node.ELEMENT_NODE) {
+    var elemId = elem.getAttribute("__pluginDomId");
+
+    if (elemId && elemId in this.positions) {
+      delete this.positions[elemId].containMapIDs[mapId];
+
+      if (isEmptyObject(this.positions[elemId].containMapIDs)) {
+        delete this.positions[elemId];
+      }
+    }
+
+    elem.classList.remove('_gmaps_cdv_');
+    elem = elem.parentNode;
+  }
+};
+
+DomObserver.prototype.registerMap = function(mapId, mapNode) {
+  mapNode.setAttribute('__pluginMapId', mapId);
+
+  var elem = mapNode;
+  while (elem.nodeType === Node.ELEMENT_NODE) {
+    var position = this.addPosition(elem);
+    position.containMapIDs[mapId] = 1;
+    elem = elem.parentNode;
+  }
+}
 
 module.exports = DomObserver;
