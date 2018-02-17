@@ -41,5 +41,6 @@ ant-gen/
 plugins/
 platforms/
 hooks/
+node_modules/
 
 out/
