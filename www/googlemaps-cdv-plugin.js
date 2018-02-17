@@ -109,15 +109,18 @@ if (typeof cordova === 'undefined') {
           for (j = 0; j < mutations.length; j++) {
             mutation = mutations[j];
             if (mutation.type === "childList") {
-              for (i = 0; i < mutation.addedNodes.length; i++) {
-                node = mutation.addedNodes[i];
+              var addedNodes = mutation.addedNodes || [];
+              for (i = 0; i < addedNodes.length; i++) {
+                node = addedNodes[i];
                 if (node.nodeType !== Node.ELEMENT_NODE) {
                   continue;
                 }
                 setDomId(node);
               }
-              for (i = 0; i < mutation.removedNodes.length; i++) {
-                node = mutation.removedNodes[i];
+
+              var removedNodes = mutation.removedNodes || [];
+              for (i = 0; i < removedNodes.length; i++) {
+                node = removedNodes[i];
                 if (node.nodeType !== Node.ELEMENT_NODE || !node.hasAttribute("__pluginDomId")) {
                   continue;
                 }

@@ -34,7 +34,7 @@ DomObserver.prototype.addPosition = function(element) {
     zIndex: common.getZIndex(element),
     overflowX: common.getStyle(element, "overflow-x"),
     overflowY: common.getStyle(element, "overflow-y"),
-    children: [],
+    children: cached ? cached.children : [],
     isMap: element.hasAttribute("__pluginMapId"),
     containMapIDs: cached ? cached.containMapIDs : {}
   };
@@ -49,7 +49,7 @@ DomObserver.prototype.traceDomTree = function(element, params) {
   }
 
   var position = this.addPosition(element);
-  var options = options || {};
+  var options = params || {};
   var isForce = options['if'] && this[options['if']](element);
 
   if (!isEmptyObject(position.containMapIDs) || isForce || position.isMap || position.pointerEvents === "none") {
